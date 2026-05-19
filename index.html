@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector de Spam en YouTube</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Detector de Spam 🤖</h1>
+            <p class="text-gray-500 mt-2">Analiza si un comentario de YouTube es legítimo o es Spam.</p>
+        </div>
+
+        <form id="spamForm" class="space-y-4">
+            <div>
+                <label for="comentario" class="block text-sm font-medium text-gray-700">Comentario a analizar</label>
+                <textarea id="comentario" rows="4" required
+                    class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ej: Earn money fast by clicking here!!!"></textarea>
+            </div>
+            
+            <button type="submit" 
+                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                Analizar Comentario
+            </button>
+        </form>
+
+        <div id="resultadoContainer" class="mt-6 hidden">
+            <div id="alertaResultado" class="p-4 rounded-md text-center font-bold">
+                </div>
+            <p id="probabilidad" class="text-center text-sm mt-2 text-gray-600"></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('spamForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Evita que la página se recargue
+            
+            const textoComentario = document.getElementById('comentario').value;
+            const container = document.getElementById('resultadoContainer');
+            const alerta = document.getElementById('alertaResultado');
+            const probabilidad = document.getElementById('probabilidad');
+            
+            // Mostrar estado de carga
+            container.classList.remove('hidden');
+            alerta.className = 'p-4 rounded-md text-center font-bold bg-blue-100 text-blue-800';
+            alerta.textContent = 'Analizando...';
+            probabilidad.textContent = '';
+
+            try {
+                // Hacer la petición a nuestra API en Docker
+                const response = await fetch('http://localhost:8000/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ texto: textoComentario })
+                });
+
+                if (!response.ok) throw new Error('Error en la API');
+
+                const data = await response.json();
+                
+                // Procesar la respuesta
+                if (data.spam === 1) {
+                    alerta.className = 'p-4 rounded-md text-center font-bold bg-red-100 text-red-800 border border-red-200';
+                    alerta.textContent = ' ¡ALERTA DE SPAM! ';
+                } else {
+                    alerta.className = 'p-4 rounded-md text-center font-bold bg-green-100 text-green-800 border border-green-200';
+                    alerta.textContent = ' Comentario Legítimo';
+                }
+                
+                probabilidad.textContent = `Probabilidad de ser spam: ${(data.probabilidad_spam * 100).toFixed(2)}%`;
+
+            } catch (error) {
+                alerta.className = 'p-4 rounded-md text-center font-bold bg-yellow-100 text-yellow-800';
+                alerta.textContent = ' Error al conectar con el servidor. ¿Está Docker corriendo?';
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
